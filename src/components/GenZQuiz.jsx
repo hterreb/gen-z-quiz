@@ -101,7 +101,7 @@ const GenZQuiz = () => {
       {!quizComplete ? (
         <>
           <div className="text-center text-xl font-bold mb-6">
-            What does "{currentQuestion.term}" mean?
+            What does &quot;{currentQuestion.term}&quot; mean?
           </div>
           
           <div className="space-y-3">
