@@ -1,10 +1,12 @@
-// src/components/GenZQuiz.jsx
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { Check, X, RefreshCw } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Check, X, RefreshCcw } from 'lucide-react';
 
 const GenZQuiz = () => {
+  // Full dictionary data
   const fullDictionary = [
     { term: "A force", definition: "Unnecessarily excessive effort" },
     { term: "Bang 30s", definition: "To fight someone, as in a physical altercation" },
@@ -46,6 +48,7 @@ const GenZQuiz = () => {
     return "slay. No cap.";
   };
 
+  // Generate a random question
   const generateQuestion = () => {
     if (dictionary.length === 0) {
       setQuizComplete(true);
@@ -55,15 +58,18 @@ const GenZQuiz = () => {
     const questionIndex = Math.floor(Math.random() * dictionary.length);
     const correct = dictionary[questionIndex];
     
+    // Remove the used question from the available pool
     const newDictionary = dictionary.filter((_, idx) => idx !== questionIndex);
     setDictionary(newDictionary);
     
+    // Get 3 random wrong answers from the full dictionary
     let wrongOptions = fullDictionary
       .filter(item => item.term !== correct.term)
       .sort(() => Math.random() - 0.5)
       .slice(0, 3)
       .map(item => item.definition);
     
+    // Combine and shuffle all options
     const allOptions = [...wrongOptions, correct.definition]
       .sort(() => Math.random() - 0.5);
     
@@ -73,6 +79,7 @@ const GenZQuiz = () => {
     setSelectedOption(null);
   };
 
+  // Start the quiz
   useEffect(() => {
     generateQuestion();
   }, []);
@@ -87,91 +94,98 @@ const GenZQuiz = () => {
     setQuestionsAnswered(questionsAnswered + 1);
   };
 
+  const handleNextQuestion = () => {
+    generateQuestion();
+  };
+
+  const handleRestart = () => {
+    setScore(0);
+    setQuestionsAnswered(0);
+    setQuizComplete(false);
+    setDictionary([...fullDictionary]);
+    generateQuestion();
+  };
+
   if (!currentQuestion && !quizComplete) return null;
 
   return (
-    <div className="max-w-2xl mx-auto p-6 bg-white rounded-lg shadow-lg">
-      <div className="text-center mb-6">
-        <h1 className="text-2xl font-bold mb-2">Gen Z Slang Quiz</h1>
-        <div className="text-sm">
-          Score: {score}/{questionsAnswered}
-        </div>
-      </div>
-
-      {!quizComplete ? (
-        <>
-          <div className="text-center text-xl font-bold mb-6">
-            What does "{currentQuestion.term}" mean?
+    <Card className="w-full max-w-2xl mx-auto">
+      <CardHeader>
+        <CardTitle className="text-center">
+          Gen Z Slang Quiz
+          <div className="text-sm mt-2">
+            Score: {score}/{questionsAnswered}
           </div>
-          
-          <div className="space-y-3">
-            {options.map((option, index) => (
-              <button
-                key={index}
-                onClick={() => !showResult && handleAnswer(option)}
-                disabled={showResult}
-                className={`w-full p-4 text-left rounded-lg border ${
-                  showResult
-                    ? option === currentQuestion.definition
-                      ? 'bg-green-100 border-green-500'
-                      : option === selectedOption
-                      ? 'bg-red-100 border-red-500'
-                      : 'bg-gray-50 border-gray-200'
-                    : 'bg-gray-50 border-gray-200 hover:bg-gray-100'
-                } transition-colors`}
-              >
-                {option}
-                {showResult && option === currentQuestion.definition && (
-                  <Check className="inline ml-2 text-green-500" />
-                )}
-                {showResult && option === selectedOption && option !== currentQuestion.definition && (
-                  <X className="inline ml-2 text-red-500" />
-                )}
-              </button>
-            ))}
-          </div>
-
-          {showResult && (
-            <div className="text-center mt-6">
-              <button
-                onClick={generateQuestion}
-                className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
-              >
-                {questionsAnswered >= 20 ? "See Final Results" : "Next Question"}
-              </button>
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {!quizComplete ? (
+          <>
+            <div className="text-center text-xl font-bold mb-6">
+              What does "{currentQuestion.term}" mean?
             </div>
-          )}
-        </>
-      ) : (
-        <div className="text-center space-y-6">
-          <h3 className="text-2xl font-bold">Quiz Complete!</h3>
-          <div className="space-y-2">
-            <p className="text-xl">
-              Final Score: {score}/20 ({Math.round((score/20) * 100)}%)
-            </p>
-            <p className="text-lg font-semibold">
-              Your Gen Z Language Level:
-            </p>
-            <p className="text-2xl font-bold text-blue-600">
-              {getScoreCategory(score)}
-            </p>
+            
+            <div className="space-y-3">
+              {options.map((option, index) => (
+                <Button
+                  key={index}
+                  variant={
+                    showResult
+                      ? option === currentQuestion.definition
+                        ? "default"
+                        : option === selectedOption
+                        ? "destructive"
+                        : "outline"
+                      : "outline"
+                  }
+                  className="w-full text-left py-4 px-6"
+                  onClick={() => !showResult && handleAnswer(option)}
+                  disabled={showResult}
+                >
+                  {option}
+                  {showResult && option === currentQuestion.definition && (
+                    <Check className="ml-2 h-4 w-4 text-green-500" />
+                  )}
+                  {showResult && option === selectedOption && option !== currentQuestion.definition && (
+                    <X className="ml-2 h-4 w-4 text-red-500" />
+                  )}
+                </Button>
+              ))}
+            </div>
+
+            {showResult && (
+              <div className="flex justify-center mt-6">
+                <Button onClick={handleNextQuestion}>
+                  {questionsAnswered >= 20 ? "See Final Results" : "Next Question"}
+                </Button>
+              </div>
+            )}
+          </>
+        ) : (
+          <div className="text-center space-y-6">
+            <h3 className="text-2xl font-bold">Quiz Complete!</h3>
+            <div className="space-y-2">
+              <p className="text-xl">
+                Final Score: {score}/20 ({Math.round((score/20) * 100)}%)
+              </p>
+              <p className="text-lg font-semibold">
+                Your Gen Z Language Level:
+              </p>
+              <p className="text-2xl font-bold text-blue-600">
+                {getScoreCategory(score)}
+              </p>
+            </div>
+            <Button 
+              onClick={handleRestart}
+              className="flex items-center"
+            >
+              <RefreshCcw className="mr-2 h-4 w-4" />
+              Try Again
+            </Button>
           </div>
-          <button 
-            onClick={() => {
-              setScore(0);
-              setQuestionsAnswered(0);
-              setQuizComplete(false);
-              setDictionary([...fullDictionary]);
-              generateQuestion();
-            }}
-            className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors flex items-center gap-2 mx-auto"
-          >
-            <RefreshCw className="w-4 h-4" />
-            Try Again
-          </button>
-        </div>
-      )}
-    </div>
+        )}
+      </CardContent>
+    </Card>
   );
 };
 
