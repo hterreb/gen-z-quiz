@@ -1,54 +1,49 @@
-// src/components/GenZQuiz.jsx
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Check, X, RefreshCw } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { fullDictionary } from '../data/dictionary';
+
+// Add this function before the component
+const getScoreCategory = (score) => {
+  if (score >= 18) return "yass, slay queen 🔥";
+  if (score >= 15) return "Gen Z, sus 😎";
+  if (score >= 10) return "Hardo Millennial 👍";
+  if (score >= 5) return "Salty Xer 😅";
+  return "Cheugy Boomer 😢";
+};
 
 const GenZQuiz = () => {
-  const fullDictionary = [
-    { term: "A force", definition: "Unnecessarily excessive effort" },
-    { term: "Bang 30s", definition: "To fight someone, as in a physical altercation" },
-    { term: "Beat your face/cake your face", definition: "Apply makeup" },
-    { term: "bops", definition: "A modern enjoyable song" },
-    { term: "bouta", definition: "I am about to..." },
-    { term: "bread", definition: "Future money" },
-    { term: "Catch a fade/catch these hands", definition: "To get punched and/or knocked out" },
-    { term: "Clap back", definition: "Respond to an insult with an equal or greater insult" },
-    { term: "clapped", definition: "A crazy person; someone who was punched" },
-    { term: "crackie", definition: "Someone who juuls/smokes" },
-    { term: "cross fade", definition: "Doubly inebriated" },
-    { term: "deadass", definition: "I am serious; Are you serious?" },
-    { term: "finesse", definition: "To steal" },
-    { term: "finna", definition: "I or We are planning something" },
-    { term: "Gassing/Hyping", definition: "Offering compliments; feeding one's ego" },
-    { term: "High key", definition: "Very obvious" },
-    { term: "Low key", definition: "Not obvious" },
-    { term: "periodt", definition: "See 'facts'" },
-    { term: "slay", definition: "Do really well" },
-    { term: "sus", definition: "Suspicious; shady" }
-  ];
-
   const [dictionary, setDictionary] = useState([...fullDictionary]);
   const [currentQuestion, setCurrentQuestion] = useState(null);
   const [options, setOptions] = useState([]);
   const [score, setScore] = useState(0);
+  const [highScore, setHighScore] = useState(0);
   const [questionsAnswered, setQuestionsAnswered] = useState(0);
   const [showResult, setShowResult] = useState(false);
   const [selectedOption, setSelectedOption] = useState(null);
   const [quizComplete, setQuizComplete] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const getScoreCategory = (score) => {
-    const percentage = (score / 20) * 100;
-    if (percentage <= 20) return "cheugy Boomer";
-    if (percentage <= 40) return "salty Xer";
-    if (percentage <= 60) return "hardo Millennial";
-    if (percentage <= 80) return "Gen Z opp";
-    return "slay. No cap.";
-  };
+  // Load scores from localStorage
+  useEffect(() => {
+    const savedScore = typeof window !== 'undefined' ? localStorage.getItem('genZQuizScore') : '0';
+    const savedHighScore = typeof window !== 'undefined' ? localStorage.getItem('genZQuizHighScore') : '0';
+    
+    setScore(savedScore ? parseInt(savedScore, 0) : 0);
+    setHighScore(savedHighScore ? parseInt(savedHighScore, 0) : 0);
+  }, []);
 
-  const generateQuestion = () => {
+  const generateQuestion = useCallback(() => {
     if (dictionary.length === 0) {
       setQuizComplete(true);
+      if (score > highScore) {
+        setHighScore(score);
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('genZQuizHighScore', score.toString());
+        }
+      }
       return;
     }
 
@@ -71,105 +66,140 @@ const GenZQuiz = () => {
     setOptions(allOptions);
     setShowResult(false);
     setSelectedOption(null);
-  };
+    setIsLoading(false);
+  }, [dictionary, score, highScore]);
 
+  // Initialize the first question
   useEffect(() => {
     generateQuestion();
-  }, []);
+  }, []); // Empty dependency array for initial load only
 
   const handleAnswer = (selectedDefinition) => {
     setSelectedOption(selectedDefinition);
     setShowResult(true);
     
-    if (selectedDefinition === currentQuestion.definition) {
-      setScore(score + 1);
+    const newScore = selectedDefinition === currentQuestion.definition ? score + 1 : score;
+    setScore(newScore);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('genZQuizScore', newScore.toString());
     }
+    
     setQuestionsAnswered(questionsAnswered + 1);
   };
 
-  if (!currentQuestion && !quizComplete) return null;
+  if (!fullDictionary || fullDictionary.length === 0) {
+    return <div className="text-center p-6">Error: Dictionary not loaded</div>;
+  }
+
+  if (isLoading) {
+    return <div className="text-center p-6">Loading...</div>;
+  }
 
   return (
     <div className="max-w-2xl mx-auto p-6 bg-white rounded-lg shadow-lg">
       <div className="text-center mb-6">
         <h1 className="text-2xl font-bold mb-2">Gen Z Slang Quiz</h1>
-        <div className="text-sm">
-          Score: {score}/{questionsAnswered}
+        <div className="text-sm space-y-1">
+          <div>Score: {score}/{questionsAnswered}</div>
+          <div>High Score: {highScore}/20</div>
+          {!quizComplete && (
+            <div className="text-xs text-gray-600">
+              Question {questionsAnswered + 1}/20
+            </div>
+          )}
         </div>
       </div>
 
       {!quizComplete ? (
-        <>
-          <div className="text-center text-xl font-bold mb-6">
-            What does &quot;{currentQuestion.term}&quot; mean?
-          </div>
-          
-          <div className="space-y-3">
-            {options.map((option, index) => (
-              <button
-                key={index}
-                onClick={() => !showResult && handleAnswer(option)}
-                disabled={showResult}
-                className={`w-full p-4 text-left rounded-lg border ${
-                  showResult
-                    ? option === currentQuestion.definition
-                      ? 'bg-green-100 border-green-500'
-                      : option === selectedOption
-                      ? 'bg-red-100 border-red-500'
-                      : 'bg-gray-50 border-gray-200'
-                    : 'bg-gray-50 border-gray-200 hover:bg-gray-100'
-                } transition-colors`}
-              >
-                {option}
-                {showResult && option === currentQuestion.definition && (
-                  <Check className="inline ml-2 text-green-500" />
-                )}
-                {showResult && option === selectedOption && option !== currentQuestion.definition && (
-                  <X className="inline ml-2 text-red-500" />
-                )}
-              </button>
-            ))}
-          </div>
-
-          {showResult && (
-            <div className="text-center mt-6">
-              <button
-                onClick={generateQuestion}
-                className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
-              >
-                {questionsAnswered >= 20 ? "See Final Results" : "Next Question"}
-              </button>
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={currentQuestion.term}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            transition={{ duration: 0.3 }}
+          >
+            <div className="text-center text-xl font-bold mb-6">
+              What does &quot;{currentQuestion.term}&quot; mean?
             </div>
-          )}
-        </>
+            
+            <div className="space-y-3">
+              {options.map((option, index) => (
+                <motion.button
+                  key={index}
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: index * 0.1 }}
+                  onClick={() => !showResult && handleAnswer(option)}
+                  disabled={showResult}
+                  aria-label={`Answer option: ${option}`}
+                  role="option"
+                  className={`w-full p-4 text-left rounded-lg border ${
+                    showResult
+                      ? option === currentQuestion.definition
+                        ? 'bg-green-100 border-green-500'
+                        : option === selectedOption
+                        ? 'bg-red-100 border-red-500'
+                        : 'bg-gray-50 border-gray-200'
+                      : 'bg-gray-50 border-gray-200 hover:bg-gray-100'
+                  } transition-colors`}
+                >
+                  {option}
+                  {showResult && option === currentQuestion.definition && (
+                    <Check className="inline ml-2 text-green-500" />
+                  )}
+                  {showResult && option === selectedOption && option !== currentQuestion.definition && (
+                    <X className="inline ml-2 text-red-500" />
+                  )}
+                </motion.button>
+              ))}
+            </div>
+
+            {showResult && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="text-center mt-6"
+              >
+                <button
+                  onClick={generateQuestion}
+                  className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
+                >
+                  {questionsAnswered >= 20 ? "See Final Results" : "Next Question"}
+                </button>
+              </motion.div>
+            )}
+          </motion.div>
+        </AnimatePresence>
       ) : (
-        <div className="text-center space-y-6">
-          <h3 className="text-2xl font-bold">Quiz Complete!</h3>
-          <div className="space-y-2">
-            <p className="text-xl">
-              Final Score: {score}/20 ({Math.round((score/20) * 100)}%)
-            </p>
-            <p className="text-lg font-semibold">
-              Your Gen Z Language Level:
-            </p>
-            <p className="text-2xl font-bold text-blue-600">
-              {getScoreCategory(score)}
-            </p>
-          </div>
-          <button 
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="text-center"
+        >
+          <h2 className="text-2xl font-bold mb-4">Quiz Complete!</h2>
+          <p className="mb-4">
+            Final Score: {score}/20
+            {score > highScore && " - New High Score! 🎉"}
+          </p>
+          <p className="mb-6">
+            Your level: {getScoreCategory(score)}
+          </p>
+          <button
             onClick={() => {
+              setDictionary([...fullDictionary]);
               setScore(0);
               setQuestionsAnswered(0);
               setQuizComplete(false);
-              setDictionary([...fullDictionary]);
+              localStorage.setItem('genZQuizScore', '0');
               generateQuestion();
             }}
-            className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors flex items-center gap-2 mx-auto"
+            className="px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors flex items-center justify-center mx-auto"
           >
-            <RefreshCw className="w-4 h-4" />
+            <RefreshCw className="w-4 h-4 mr-2" />
             Try Again
           </button>
-        </div>
+        </motion.div>
       )}
     </div>
   );
