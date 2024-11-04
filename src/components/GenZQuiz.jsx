@@ -4,14 +4,30 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Check, X, RefreshCw } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { fullDictionary } from '../data/dictionary';
+import Image from 'next/image';
 
 // Add this function before the component
 const getScoreCategory = (score) => {
-  if (score >= 18) return "yass, slay queen 🔥";
-  if (score >= 15) return "Gen Z, sus 😎";
-  if (score >= 10) return "Hardo Millennial 👍";
-  if (score >= 5) return "Salty Xer 😅";
-  return "Cheugy Boomer 😢";
+  if (score >= 18) return {
+    text: "yass, slay queen 🔥",
+    image: "/score-images/queen.webp"
+  };
+  if (score >= 15) return {
+    text: "Gen Z, sus 😎",
+    image: "/score-images/sus.webp"
+  };
+  if (score >= 10) return {
+    text: "Hardo Millennial 👍",
+    image: "/score-images/millenial.webp"
+  };
+  if (score >= 5) return {
+    text: "Salty Xer 😅",
+    image: "/score-images/genx.webp"
+  };
+  return {
+    text: "Cheugy Boomer 😢",
+    image: "/score-images/boomer.webp"
+  };
 };
 
 const GenZQuiz = () => {
@@ -25,17 +41,17 @@ const GenZQuiz = () => {
   const [selectedOption, setSelectedOption] = useState(null);
   const [quizComplete, setQuizComplete] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [showWelcome, setShowWelcome] = useState(true);
 
-  // Load scores from localStorage
-  useEffect(() => {
-    const savedScore = typeof window !== 'undefined' ? localStorage.getItem('genZQuizScore') : '0';
-    const savedHighScore = typeof window !== 'undefined' ? localStorage.getItem('genZQuizHighScore') : '0';
-    
-    setScore(savedScore ? parseInt(savedScore, 0) : 0);
-    setHighScore(savedHighScore ? parseInt(savedHighScore, 0) : 0);
+
+   // Initialize the first question
+   useEffect(() => {
+    setIsLoading(false);  // Just set loading to false, don't generate question
   }, []);
 
   const generateQuestion = useCallback(() => {
+    setShowWelcome(false); // Hide welcome screen when starting quiz
+
     if (dictionary.length === 0) {
       setQuizComplete(true);
       if (score > highScore) {
@@ -45,6 +61,10 @@ const GenZQuiz = () => {
         }
       }
       return;
+    }
+
+    if (!showWelcome) {
+      setQuestionsAnswered(prev => prev + 1);
     }
 
     const questionIndex = Math.floor(Math.random() * dictionary.length);
@@ -67,12 +87,12 @@ const GenZQuiz = () => {
     setShowResult(false);
     setSelectedOption(null);
     setIsLoading(false);
-  }, [dictionary, score, highScore]);
+  }, [dictionary, score, highScore, showWelcome]);
 
   // Initialize the first question
   useEffect(() => {
-    generateQuestion();
-  }, []); // Empty dependency array for initial load only
+    setIsLoading(false);
+  }, []);
 
   const handleAnswer = (selectedDefinition) => {
     setSelectedOption(selectedDefinition);
@@ -84,7 +104,6 @@ const GenZQuiz = () => {
       localStorage.setItem('genZQuizScore', newScore.toString());
     }
     
-    setQuestionsAnswered(questionsAnswered + 1);
   };
 
   if (!fullDictionary || fullDictionary.length === 0) {
@@ -97,20 +116,31 @@ const GenZQuiz = () => {
 
   return (
     <div className="max-w-2xl mx-auto p-6 bg-white rounded-lg shadow-lg">
-      <div className="text-center mb-6">
-        <h1 className="text-2xl font-bold mb-2">Gen Z Slang Quiz</h1>
-        <div className="text-sm space-y-1">
-          <div>Score: {score}/{questionsAnswered}</div>
-          <div>High Score: {highScore}/20</div>
-          {!quizComplete && (
-            <div className="text-xs text-gray-600">
-              Question {questionsAnswered + 1}/20
-            </div>
-          )}
-        </div>
-      </div>
-
-      {!quizComplete ? (
+      {showWelcome ? (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="text-center"
+        >
+          <div className="relative w-full h-48 mb-6">
+            <Image
+              src="/cover.avif"
+              alt="Gen Z Slang Quiz Cover"
+              fill
+              className="object-contain"
+              priority
+            />
+          </div>
+          <h1 className="text-4xl font-bold mb-6">Gen Z Slang Quiz</h1>
+          <p className="text-xl mb-8">Find out how down you are with the kids these days</p>
+          <button
+            onClick={generateQuestion}
+            className="px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+          >
+            Start Quiz
+          </button>
+        </motion.div>
+      ) : !quizComplete ? (
         <AnimatePresence mode="wait">
           <motion.div
             key={currentQuestion.term}
@@ -119,6 +149,19 @@ const GenZQuiz = () => {
             exit={{ opacity: 0, y: -20 }}
             transition={{ duration: 0.3 }}
           >
+            <div className="text-center mb-6">
+              <h1 className="text-2xl font-bold mb-2">Gen Z Slang Quiz</h1>
+              <div className="text-sm space-y-1">
+                <div>Score: {score}/{questionsAnswered}</div>
+                <div>High Score: {highScore}/20</div>
+                {!quizComplete && (
+                  <div className="text-xs text-gray-600">
+                    Question {questionsAnswered + 1}/20
+                  </div>
+                )}
+              </div>
+            </div>
+
             <div className="text-center text-xl font-bold mb-6">
               What does &quot;{currentQuestion.term}&quot; mean?
             </div>
@@ -182,15 +225,25 @@ const GenZQuiz = () => {
             Final Score: {score}/20
             {score > highScore && " - New High Score! 🎉"}
           </p>
-          <p className="mb-6">
-            Your level: {getScoreCategory(score)}
-          </p>
+          <div className="mb-6">
+            <p className="mb-4">Your level: {getScoreCategory(score).text}</p>
+            <div className="relative w-64 h-64 mx-auto">
+              <Image
+                src={getScoreCategory(score).image}
+                alt={getScoreCategory(score).text}
+                fill
+                className="object-contain"
+                priority
+              />
+            </div>
+          </div>
           <button
             onClick={() => {
               setDictionary([...fullDictionary]);
               setScore(0);
               setQuestionsAnswered(0);
               setQuizComplete(false);
+              setShowWelcome(true);
               localStorage.setItem('genZQuizScore', '0');
               generateQuestion();
             }}
