@@ -1,12 +1,12 @@
 import type { Metadata } from "next";
 import localFont from "next/font/local";
 import "./globals.css";
-import { Inter } from "next/font/google";
+//import { Inter } from "next/font/google";
 import "./globals.css";
 
-const inter = Inter({ subsets: ["latin"] });
+//const inter = Inter({ subsets: ["latin"] });
 
-export const metadata = {
+export const metadata: Metadata = {
   title: "Gen Z Slang Quiz",
   description: "Test your knowledge of Gen Z slang and see how well you understand modern internet language!",
   icons: {
