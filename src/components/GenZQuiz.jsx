@@ -115,7 +115,7 @@ const GenZQuiz = () => {
   }
 
   return (
-    <div className="max-w-2xl mx-auto p-6 bg-white rounded-lg shadow-lg">
+    <div className="max-w-2xl mx-auto p-6 bg-white rounded-lg shadow-lg text-gray-800">
       {showWelcome ? (
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -131,8 +131,8 @@ const GenZQuiz = () => {
               priority
             />
           </div>
-          <h1 className="text-4xl font-bold mb-6">Gen Z Slang Quiz</h1>
-          <p className="text-xl mb-8">Find out how down you are with the kids these days</p>
+          <h1 className="text-4xl font-bold mb-6 text-gray-900">Gen Z Slang Quiz</h1>
+          <p className="text-xl mb-8 text-gray-800">Find out how down you are with the kids these days</p>
           <button
             onClick={generateQuestion}
             className="px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
@@ -150,19 +150,19 @@ const GenZQuiz = () => {
             transition={{ duration: 0.3 }}
           >
             <div className="text-center mb-6">
-              <h1 className="text-2xl font-bold mb-2">Gen Z Slang Quiz</h1>
-              <div className="text-sm space-y-1">
+              <h1 className="text-2xl font-bold mb-2 text-gray-900">Gen Z Slang Quiz</h1>
+              <div className="text-sm space-y-1 text-gray-800">
                 <div>Score: {score}/{questionsAnswered}</div>
                 <div>High Score: {highScore}/20</div>
                 {!quizComplete && (
-                  <div className="text-xs text-gray-600">
+                  <div className="text-gray-700">
                     Question {questionsAnswered + 1}/20
                   </div>
                 )}
               </div>
             </div>
 
-            <div className="text-center text-xl font-bold mb-6">
+            <div className="text-center text-xl font-bold mb-6 text-gray-900">
               What does &quot;{currentQuestion.term}&quot; mean?
             </div>
             
@@ -220,13 +220,13 @@ const GenZQuiz = () => {
           animate={{ opacity: 1 }}
           className="text-center"
         >
-          <h2 className="text-2xl font-bold mb-4">Quiz Complete!</h2>
-          <p className="mb-4">
+          <h2 className="text-2xl font-bold mb-4 text-gray-900">Quiz Complete!</h2>
+          <p className="mb-4 text-gray-800">
             Final Score: {score}/20
             {score > highScore && " - New High Score! 🎉"}
           </p>
           <div className="mb-6">
-            <p className="mb-4">Your level: {getScoreCategory(score).text}</p>
+            <p className="mb-4 text-gray-800">Your level: {getScoreCategory(score).text}</p>
             <div className="relative w-64 h-64 mx-auto">
               <Image
                 src={getScoreCategory(score).image}
