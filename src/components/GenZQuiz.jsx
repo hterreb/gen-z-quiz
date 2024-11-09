@@ -8,19 +8,19 @@ import Image from 'next/image';
 
 // Add this function before the component
 const getScoreCategory = (score) => {
-  if (score >= 18) return {
+  if (score >= 9) return {
     text: "yass, slay queen 🔥",
     image: "/score-images/queen.webp"
   };
-  if (score >= 15) return {
+  if (score >= 7) return {
     text: "Gen Z, sus 😎",
     image: "/score-images/sus.webp"
   };
-  if (score >= 10) return {
+  if (score >= 5) return {
     text: "Hardo Millennial 👍",
     image: "/score-images/millenial.webp"
   };
-  if (score >= 5) return {
+  if (score >= 3) return {
     text: "Salty Xer 😅",
     image: "/score-images/genx.webp"
   };
@@ -28,6 +28,35 @@ const getScoreCategory = (score) => {
     text: "Cheugy Boomer 😢",
     image: "/score-images/boomer.webp"
   };
+};
+
+// Add this function before your component
+const shareResult = async (score, level, timeInMs) => {
+  const timeString = formatTime(timeInMs);
+  const text = `I scored ${score}/10 on the Gen Z Slang Quiz in ${timeString}! My level: ${level} 🎯\nTest your knowledge: gen-z-quiz.vercel.app`;
+  
+  if (navigator.share) {
+    try {
+      await navigator.share({
+        text: text
+      });
+    } catch (error) {
+      console.log('Error sharing:', error);
+    }
+  } else {
+    // Fallback to copying to clipboard
+    navigator.clipboard.writeText(text)
+      .then(() => alert('Result copied to clipboard!'))
+      .catch(err => console.log('Error copying text:', err));
+  }
+};
+
+// Format time function
+const formatTime = (milliseconds) => {
+  const seconds = Math.floor(milliseconds / 1000);
+  const minutes = Math.floor(seconds / 60);
+  const remainingSeconds = seconds % 60;
+  return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
 };
 
 const GenZQuiz = () => {
@@ -42,17 +71,48 @@ const GenZQuiz = () => {
   const [quizComplete, setQuizComplete] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [showWelcome, setShowWelcome] = useState(true);
+  const [startTime, setStartTime] = useState(null);
+  const [endTime, setEndTime] = useState(null);
+  const [elapsedTime, setElapsedTime] = useState(0);
 
+  // Add this function near the top of your component
+  const handleKeyPress = useCallback((event, callback) => {
+    if (event.key === 'Enter') {
+      callback();
+    }
+  }, []);
 
-   // Initialize the first question
-   useEffect(() => {
+  // Initialize the first question
+  useEffect(() => {
     setIsLoading(false);  // Just set loading to false, don't generate question
   }, []);
+
+  useEffect(() => {
+    let interval;
+    if (startTime && !quizComplete) {
+      interval = setInterval(() => {
+        setElapsedTime(Date.now() - startTime);
+      }, 1000);
+    }
+    return () => {
+      if (interval) {
+        clearInterval(interval);
+      }
+    };
+  }, [startTime, quizComplete]);
 
   const generateQuestion = useCallback(() => {
     setShowWelcome(false); // Hide welcome screen when starting quiz
 
-    if (dictionary.length === 0) {
+    // Start timer on first question
+    if (questionsAnswered === 0) {
+      const now = Date.now();
+      setStartTime(now);
+      setElapsedTime(0);
+    }
+
+    if (questionsAnswered >= 9) {
+      setEndTime(Date.now());  // Set end time when quiz completes
       setQuizComplete(true);
       if (score > highScore) {
         setHighScore(score);
@@ -87,7 +147,7 @@ const GenZQuiz = () => {
     setShowResult(false);
     setSelectedOption(null);
     setIsLoading(false);
-  }, [dictionary, score, highScore, showWelcome]);
+  }, [dictionary, score, highScore, showWelcome, questionsAnswered]);
 
   // Initialize the first question
   useEffect(() => {
@@ -104,6 +164,13 @@ const GenZQuiz = () => {
       localStorage.setItem('genZQuizScore', newScore.toString());
     }
     
+  };
+
+  const handleKeyDown = (event, callback) => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      callback();
+    }
   };
 
   if (!fullDictionary || fullDictionary.length === 0) {
@@ -135,6 +202,8 @@ const GenZQuiz = () => {
           <p className="text-xl mb-8 text-gray-800">Find out how down you are with the kids these days</p>
           <button
             onClick={generateQuestion}
+            onKeyPress={(e) => handleKeyPress(e, generateQuestion)}
+            tabIndex={0}
             className="px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
           >
             Start Quiz
@@ -153,11 +222,16 @@ const GenZQuiz = () => {
               <h1 className="text-2xl font-bold mb-2 text-gray-900">Gen Z Slang Quiz</h1>
               <div className="text-sm space-y-1 text-gray-800">
                 <div>Score: {score}/{questionsAnswered}</div>
-                <div>High Score: {highScore}/20</div>
+                <div>High Score: {highScore}/10</div>
                 {!quizComplete && (
-                  <div className="text-gray-700">
-                    Question {questionsAnswered + 1}/20
-                  </div>
+                  <>
+                    <div className="text-gray-700">
+                      Question {questionsAnswered + 1}/10
+                    </div>
+                    <div className="text-gray-700 font-mono">
+                      Time: {formatTime(elapsedTime)}
+                    </div>
+                  </>
                 )}
               </div>
             </div>
@@ -174,7 +248,9 @@ const GenZQuiz = () => {
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: index * 0.1 }}
                   onClick={() => !showResult && handleAnswer(option)}
+                  onKeyDown={(e) => handleKeyDown(e, () => !showResult && handleAnswer(option))}
                   disabled={showResult}
+                  tabIndex={0}
                   aria-label={`Answer option: ${option}`}
                   role="option"
                   className={`w-full p-4 text-left rounded-lg border ${
@@ -185,7 +261,7 @@ const GenZQuiz = () => {
                         ? 'bg-red-100 border-red-500'
                         : 'bg-gray-50 border-gray-200'
                       : 'bg-gray-50 border-gray-200 hover:bg-gray-100'
-                  } transition-colors`}
+                  } transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500`}
                 >
                   {option}
                   {showResult && option === currentQuestion.definition && (
@@ -206,9 +282,11 @@ const GenZQuiz = () => {
               >
                 <button
                   onClick={generateQuestion}
-                  className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
+                  onKeyDown={(e) => handleKeyDown(e, generateQuestion)}
+                  tabIndex={0}
+                  className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
-                  {questionsAnswered >= 20 ? "See Final Results" : "Next Question"}
+                  {questionsAnswered >= 9 ? "See Final Results" : "Next Question"}
                 </button>
               </motion.div>
             )}
@@ -221,9 +299,12 @@ const GenZQuiz = () => {
           className="text-center"
         >
           <h2 className="text-2xl font-bold mb-4 text-gray-900">Quiz Complete!</h2>
-          <p className="mb-4 text-gray-800">
-            Final Score: {score}/20
+          <p className="mb-2 text-gray-800">
+            Final Score: {score}/10
             {score > highScore && " - New High Score! 🎉"}
+          </p>
+          <p className="mb-4 text-gray-800">
+            Time: {formatTime(endTime - startTime)}
           </p>
           <div className="mb-6">
             <p className="mb-4 text-gray-800">Your level: {getScoreCategory(score).text}</p>
@@ -237,21 +318,46 @@ const GenZQuiz = () => {
               />
             </div>
           </div>
-          <button
-            onClick={() => {
-              setDictionary([...fullDictionary]);
-              setScore(0);
-              setQuestionsAnswered(0);
-              setQuizComplete(false);
-              setShowWelcome(true);
-              localStorage.setItem('genZQuizScore', '0');
-              generateQuestion();
-            }}
-            className="px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors flex items-center justify-center mx-auto"
-          >
-            <RefreshCw className="w-4 h-4 mr-2" />
-            Try Again
-          </button>
+          <div className="space-y-4">
+            <button
+              onClick={() => shareResult(score, getScoreCategory(score).text, endTime - startTime)}
+              onKeyPress={(e) => handleKeyPress(e, () => shareResult(score, getScoreCategory(score).text, endTime - startTime))}
+              tabIndex={0}
+              className="px-6 py-3 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors flex items-center justify-center mx-auto focus:outline-none focus:ring-2 focus:ring-green-500"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+              </svg>
+              Share Result
+            </button>
+            <button
+              onClick={() => {
+                setDictionary([...fullDictionary]);
+                setScore(0);
+                setQuestionsAnswered(0);
+                setQuizComplete(false);
+                setShowWelcome(true);
+                setStartTime(null);
+                setEndTime(null);
+                localStorage.setItem('genZQuizScore', '0');
+              }}
+              onKeyPress={(e) => handleKeyPress(e, () => {
+                setDictionary([...fullDictionary]);
+                setScore(0);
+                setQuestionsAnswered(0);
+                setQuizComplete(false);
+                setShowWelcome(true);
+                setStartTime(null);
+                setEndTime(null);
+                localStorage.setItem('genZQuizScore', '0');
+              })}
+              tabIndex={0}
+              className="px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors flex items-center justify-center mx-auto focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <RefreshCw className="w-4 h-4 mr-2" />
+              Try Again
+            </button>
+          </div>
         </motion.div>
       )}
     </div>
