@@ -74,6 +74,8 @@ const GenZQuiz = () => {
   const [startTime, setStartTime] = useState(null);
   const [endTime, setEndTime] = useState(null);
   const [elapsedTime, setElapsedTime] = useState(0);
+  const [showHighScoreScreen, setShowHighScoreScreen] = useState(false);
+  const [alias, setAlias] = useState('');
 
   // Add this function near the top of your component
   const handleKeyPress = useCallback((event, callback) => {
@@ -115,10 +117,7 @@ const GenZQuiz = () => {
       setEndTime(Date.now());  // Set end time when quiz completes
       setQuizComplete(true);
       if (score > highScore) {
-        setHighScore(score);
-        if (typeof window !== 'undefined') {
-          localStorage.setItem('genZQuizHighScore', score.toString());
-        }
+        setShowHighScoreScreen(true); // Show high score screen instead of completion screen
       }
       return;
     }
@@ -171,6 +170,15 @@ const GenZQuiz = () => {
       event.preventDefault();
       callback();
     }
+  };
+
+  const handleHighScoreSubmit = (e) => {
+    e.preventDefault();
+    const finalAlias = alias.trim() || 'Anonymous';
+    localStorage.setItem('genZQuizHighScore', score.toString());
+    localStorage.setItem('genZQuizHighScoreAlias', finalAlias);
+    setHighScore(score);
+    setShowHighScoreScreen(false);
   };
 
   if (!fullDictionary || fullDictionary.length === 0) {
@@ -284,6 +292,8 @@ const GenZQuiz = () => {
                   onClick={generateQuestion}
                   onKeyDown={(e) => handleKeyDown(e, generateQuestion)}
                   tabIndex={0}
+                  role="button"
+                  aria-label={questionsAnswered >= 9 ? "See Final Results" : "Next Question"}
                   className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   {questionsAnswered >= 9 ? "See Final Results" : "Next Question"}
@@ -292,16 +302,61 @@ const GenZQuiz = () => {
             )}
           </motion.div>
         </AnimatePresence>
+      ) : showHighScoreScreen ? (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="text-center"
+        >
+          <h2 className="text-2xl font-bold mb-4">🎉 New High Score! 🎉</h2>
+          <p className="mb-6">
+            Amazing! You scored {score}/10 in {formatTime(endTime - startTime)}
+          </p>
+          <form onSubmit={handleHighScoreSubmit} className="space-y-4">
+            <div>
+              <label htmlFor="alias" className="block text-sm font-medium mb-2">
+                Enter your name:
+              </label>
+              <input
+                type="text"
+                id="alias"
+                value={alias}
+                onChange={(e) => setAlias(e.target.value)}
+                maxLength={20}
+                placeholder="Your name"
+                className="w-full max-w-xs px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                autoFocus
+              />
+            </div>
+            <div className="space-x-4">
+              <button
+                type="submit"
+                className="px-6 py-3 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors"
+                onKeyDown={(e) => handleKeyDown(e, handleHighScoreSubmit)}
+              >
+                Save Score
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowHighScoreScreen(false)}
+                className="px-6 py-3 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors"
+                onKeyDown={(e) => handleKeyDown(e, () => setShowHighScoreScreen(false))}
+              >
+                Skip
+              </button>
+            </div>
+          </form>
+        </motion.div>
       ) : (
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           className="text-center"
         >
-          <h2 className="text-2xl font-bold mb-4 text-gray-900">Quiz Complete!</h2>
-          <p className="mb-2 text-gray-800">
+          <h2 className="text-2xl font-bold mb-4">Quiz Complete!</h2>
+          <p className="mb-2">
             Final Score: {score}/10
-            {score > highScore && " - New High Score! 🎉"}
+            {score === highScore && ` - High Score by ${localStorage.getItem('genZQuizHighScoreAlias') || 'Anonymous'}!`}
           </p>
           <p className="mb-4 text-gray-800">
             Time: {formatTime(endTime - startTime)}

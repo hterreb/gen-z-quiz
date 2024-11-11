@@ -1,0 +1,22 @@
+.space-y-4 > * + * {
+  margin-top: 1rem;
+}
+
+.space-x-4 > * + * {
+  margin-left: 1rem;
+}
+
+input {
+  border: 1px solid #e5e7eb;
+  border-radius: 0.5rem;
+}
+
+input:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+}
+
+.max-w-xs {
+  max-width: 20rem;
+} 
