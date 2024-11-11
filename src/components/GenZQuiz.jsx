@@ -33,18 +33,35 @@ const getScoreCategory = (score) => {
 // Add this function before your component
 const shareResult = async (score, level, timeInMs) => {
   const timeString = formatTime(timeInMs);
-  const text = `I scored ${score}/10 on the Gen Z Slang Quiz in ${timeString}! My level: ${level} 🎯\nTest your knowledge: gen-z-quiz.vercel.app`;
+  const alias = localStorage.getItem('genZQuizHighScoreAlias') || 'Anonymous';
+  const isHighScore = score === highScore;
   
-  if (navigator.share) {
-    try {
+  const text = `${isHighScore ? `🏆 New High Score by ${alias}! 🏆\n` : ''}I scored ${score}/10 on the Gen Z Slang Quiz in ${timeString}!\nMy level: ${level} 🎯\nTest your knowledge: [your-website-url]`;
+  
+  try {
+    // Try to share with image if available
+    if (navigator.share && navigator.canShare) {
+      const response = await fetch(getScoreCategory(score).image);
+      const blob = await response.blob();
+      const file = new File([blob], 'score.png', { type: blob.type });
+      
       await navigator.share({
-        text: text
+        text: text,
+        files: [file]
       });
-    } catch (error) {
-      console.log('Error sharing:', error);
+    } else {
+      // Fallback to text-only share
+      if (navigator.share) {
+        await navigator.share({ text: text });
+      } else {
+        navigator.clipboard.writeText(text)
+          .then(() => alert('Result copied to clipboard!'))
+          .catch(err => console.log('Error copying text:', err));
+      }
     }
-  } else {
-    // Fallback to copying to clipboard
+  } catch (error) {
+    console.log('Error sharing:', error);
+    // Fallback to clipboard
     navigator.clipboard.writeText(text)
       .then(() => alert('Result copied to clipboard!'))
       .catch(err => console.log('Error copying text:', err));
@@ -356,13 +373,21 @@ const GenZQuiz = () => {
           <h2 className="text-2xl font-bold mb-4">Quiz Complete!</h2>
           <p className="mb-2">
             Final Score: {score}/10
-            {score === highScore && ` - High Score by ${localStorage.getItem('genZQuizHighScoreAlias') || 'Anonymous'}!`}
           </p>
-          <p className="mb-4 text-gray-800">
+          <p className="mb-4">
             Time: {formatTime(endTime - startTime)}
           </p>
+          {score === highScore ? (
+            <p className="text-green-600 font-bold mb-4">
+              🏆 New High Score by {localStorage.getItem('genZQuizHighScoreAlias') || 'Anonymous'}! 🏆
+            </p>
+          ) : highScore > 0 ? (
+            <p className="text-gray-600 mb-4">
+              High Score: {highScore}/10 by {localStorage.getItem('genZQuizHighScoreAlias') || 'Anonymous'}
+            </p>
+          ) : null}
           <div className="mb-6">
-            <p className="mb-4 text-gray-800">Your level: {getScoreCategory(score).text}</p>
+            <p className="mb-4">Your level: {getScoreCategory(score).text}</p>
             <div className="relative w-64 h-64 mx-auto">
               <Image
                 src={getScoreCategory(score).image}
