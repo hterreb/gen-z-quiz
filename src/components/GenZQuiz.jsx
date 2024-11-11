@@ -33,56 +33,56 @@ const getScoreCategory = (score) => {
 // Add this function before your component
 const shareResult = async (score, level, timeInMs) => {
   const timeString = formatTime(timeInMs);
-  const storedHighScore = localStorage.getItem('genZQuizHighScore');
   
   let text = `I scored ${score}/10 on the Gen Z Slang Quiz in ${timeString}!\nMy level: ${level} 🎯\nTest your knowledge: gen-z-quiz.vercel.app`;
   
-  // Only add high score text if this is a high score
-  if (score > 0 && storedHighScore && score === parseInt(storedHighScore)) {
-    const alias = localStorage.getItem('genZQuizHighScoreAlias') || 'Anonymous';
-    text = `🏆 New High Score by ${alias}! 🏆\n${text}`;
+  if (score > 0 && score === highScore) {
+    text = `🏆 New High Score by ${highScoreAlias}! 🏆\n${text}`;
   }
   
+  const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+  
   try {
-    // Check if running on mobile with Web Share API Level 2
-    if (navigator.share && 
-        navigator.canShare && 
-        /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
+    if (isMobile && navigator.share && navigator.canShare) {
       try {
+        // First share the text
+        await navigator.share({
+          title: 'My Gen Z Quiz Result',
+          text: text
+        });
+
+        // Then immediately share the image
         const imageUrl = getScoreCategory(score).image;
         const response = await fetch(imageUrl);
         const blob = await response.blob();
         const file = new File([blob], 'score-image.png', { type: blob.type });
         
-        const shareData = {
-          files: [file],
-          title: 'My Gen Z Quiz Result',
-          text: text
+        const imageShareData = {
+          files: [file]
         };
 
-        if (navigator.canShare(shareData)) {
-          await navigator.share(shareData);
-          return;
+        if (navigator.canShare(imageShareData)) {
+          await navigator.share(imageShareData);
         }
+        
+        return;
       } catch (error) {
-        console.log('Error sharing with image:', error);
+        console.log('Error with mobile share:', error);
       }
     }
     
-    // Fallback for desktop or if image sharing fails
+    // Desktop or fallback
     if (navigator.share) {
       await navigator.share({
         title: 'My Gen Z Quiz Result',
         text: text
       });
     } else {
-      // Desktop fallback - copy to clipboard
       await navigator.clipboard.writeText(text);
       alert('Result copied to clipboard!');
     }
   } catch (error) {
     console.error('Error sharing:', error);
-    // Final fallback
     try {
       await navigator.clipboard.writeText(text);
       alert('Result copied to clipboard!');
@@ -106,13 +106,9 @@ const GenZQuiz = () => {
   const [currentQuestion, setCurrentQuestion] = useState(null);
   const [options, setOptions] = useState([]);
   const [score, setScore] = useState(0);
-  const [highScore, setHighScore] = useState(() => {
-    if (typeof window !== 'undefined') {
-      const stored = localStorage.getItem('genZQuizHighScore');
-      return stored ? parseInt(stored) : 0;
-    }
-    return 0;
-  });
+  const [highScore, setHighScore] = useState(0);
+  const [highScoreAlias, setHighScoreAlias] = useState('Anonymous');
+  const [highScoreTime, setHighScoreTime] = useState(0);
   const [questionsAnswered, setQuestionsAnswered] = useState(0);
   const [showResult, setShowResult] = useState(false);
   const [selectedOption, setSelectedOption] = useState(null);
@@ -151,6 +147,17 @@ const GenZQuiz = () => {
     };
   }, [startTime, quizComplete]);
 
+  useEffect(() => {
+    fetch('/api/highscore')
+      .then(res => res.json())
+      .then(data => {
+        setHighScore(data.score);
+        setHighScoreAlias(data.alias);
+        setHighScoreTime(data.time);
+      })
+      .catch(error => console.error('Error fetching high score:', error));
+  }, []);
+
   const generateQuestion = useCallback(() => {
     setShowWelcome(false); // Hide welcome screen when starting quiz
 
@@ -162,10 +169,13 @@ const GenZQuiz = () => {
     }
 
     if (questionsAnswered >= 9) {
-      setEndTime(Date.now());  // Set end time when quiz completes
+      const finalTime = Date.now() - startTime;
+      setEndTime(Date.now());
       setQuizComplete(true);
-      if (score > 0 && score > highScore) {
-        setShowHighScoreScreen(true); // Show high score screen instead of completion screen
+      
+      // Check if this is a new high score
+      if (score > highScore && score > 0) {
+        setShowHighScoreScreen(true);
       }
       return;
     }
@@ -220,13 +230,34 @@ const GenZQuiz = () => {
     }
   };
 
-  const handleHighScoreSubmit = (e) => {
+  const handleHighScoreSubmit = async (e) => {
     e.preventDefault();
-    const finalAlias = alias.trim() || 'Anonymous';
-    localStorage.setItem('genZQuizHighScore', score.toString());
-    localStorage.setItem('genZQuizHighScoreAlias', finalAlias);
-    setHighScore(score);
-    setShowHighScoreScreen(false);
+    const finalTime = endTime - startTime;
+    
+    try {
+      const response = await fetch('/api/highscore', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          score: score,
+          alias: alias.trim() || 'Anonymous',
+          time: finalTime
+        })
+      });
+
+      const data = await response.json();
+      
+      if (response.ok) {
+        setHighScore(data.score);
+        setHighScoreAlias(data.alias);
+        setHighScoreTime(data.time);
+        setShowHighScoreScreen(false);
+      }
+    } catch (error) {
+      console.error('Error saving high score:', error);
+    }
   };
 
   if (!fullDictionary || fullDictionary.length === 0) {
@@ -282,7 +313,7 @@ const GenZQuiz = () => {
                   High Score: {highScore}/10
                   {highScore > 0 && (
                     <span className="text-gray-600 ml-1">
-                      by {localStorage.getItem('genZQuizHighScoreAlias') || 'Anonymous'}
+                      by {highScoreAlias} ({formatTime(highScoreTime)})
                     </span>
                   )}
                 </div>
