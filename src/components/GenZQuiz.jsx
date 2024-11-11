@@ -35,7 +35,7 @@ const shareResult = async (score, level, timeInMs) => {
   const timeString = formatTime(timeInMs);
   const storedHighScore = localStorage.getItem('genZQuizHighScore');
   
-  let text = `I scored ${score}/10 on the Gen Z Slang Quiz in ${timeString}!\nMy level: ${level} 🎯\nTest your knowledge: [your-website-url]`;
+  let text = `I scored ${score}/10 on the Gen Z Slang Quiz in ${timeString}!\nMy level: ${level} 🎯\nTest your knowledge: gen-z-quiz.vercel.app`;
   
   // Only add high score text if this is a high score
   if (score > 0 && storedHighScore && score === parseInt(storedHighScore)) {
@@ -44,22 +44,21 @@ const shareResult = async (score, level, timeInMs) => {
   }
   
   try {
-    // Check if running on mobile
+    // Check if running on mobile with Web Share API Level 2
     if (navigator.share && 
         navigator.canShare && 
         /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
       try {
-        // Get the image from your public folder
         const imageUrl = getScoreCategory(score).image;
         const response = await fetch(imageUrl);
         const blob = await response.blob();
         const file = new File([blob], 'score-image.png', { type: blob.type });
         
-        // Check if we can share files
         const shareData = {
+          files: [file],
           title: 'My Gen Z Quiz Result',
           text: text,
-          files: [file]
+          url: 'gen-z-quiz.vercel.app'
         };
 
         if (navigator.canShare(shareData)) {
@@ -68,15 +67,15 @@ const shareResult = async (score, level, timeInMs) => {
         }
       } catch (error) {
         console.log('Error sharing with image:', error);
-        // Fall through to text-only share
       }
     }
     
-    // Text-only share
+    // Fallback for desktop or if image sharing fails
     if (navigator.share) {
       await navigator.share({
         title: 'My Gen Z Quiz Result',
-        text: text
+        text: text,
+        url: 'gen-z-quiz.vercel.app'
       });
     } else {
       await navigator.clipboard.writeText(text);
@@ -84,6 +83,7 @@ const shareResult = async (score, level, timeInMs) => {
     }
   } catch (error) {
     console.error('Error sharing:', error);
+    // Final fallback
     try {
       await navigator.clipboard.writeText(text);
       alert('Result copied to clipboard!');
