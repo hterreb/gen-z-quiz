@@ -36,10 +36,6 @@ const shareResult = async (score, level, timeInMs) => {
   
   let text = `I scored ${score}/10 on the Gen Z Slang Quiz in ${timeString}!\nMy level: ${level} 🎯\nTest your knowledge: gen-z-quiz.vercel.app`;
   
-  if (score > 0 && score === highScore) {
-    text = `🏆 New High Score by ${highScoreAlias}! 🏆\n${text}`;
-  }
-  
   try {
     if (navigator.share) {
       await navigator.share({
