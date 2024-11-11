@@ -33,43 +33,29 @@ const getScoreCategory = (score) => {
 // Add this function before your component
 const shareResult = async (score, level, timeInMs) => {
   const timeString = formatTime(timeInMs);
-  const storedHighScore = localStorage.getItem('genZQuizHighScore');
-  const isHighScore = score > 0 && score === parseInt(storedHighScore);
   
+  // Basic result text
   let text = `I scored ${score}/10 on the Gen Z Slang Quiz in ${timeString}!\nMy level: ${level} 🎯\nTest your knowledge: [your-website-url]`;
   
-  if (isHighScore) {
-    const alias = localStorage.getItem('genZQuizHighScoreAlias') || 'Anonymous';
-    text = `🏆 New High Score by ${alias}! 🏆\n${text}`;
-  }
-  
   try {
-    // Try to share with image if available
-    if (navigator.share && navigator.canShare) {
-      const response = await fetch(getScoreCategory(score).image);
-      const blob = await response.blob();
-      const file = new File([blob], 'score.png', { type: blob.type });
-      
+    if (navigator.share) {
       await navigator.share({
+        title: 'My Gen Z Quiz Result',
         text: text,
-        files: [file]
       });
     } else {
-      // Fallback to text-only share
-      if (navigator.share) {
-        await navigator.share({ text: text });
-      } else {
-        navigator.clipboard.writeText(text)
-          .then(() => alert('Result copied to clipboard!'))
-          .catch(err => console.log('Error copying text:', err));
-      }
+      await navigator.clipboard.writeText(text);
+      alert('Result copied to clipboard!');
     }
   } catch (error) {
-    console.log('Error sharing:', error);
-    // Fallback to clipboard
-    navigator.clipboard.writeText(text)
-      .then(() => alert('Result copied to clipboard!'))
-      .catch(err => console.log('Error copying text:', err));
+    console.error('Error sharing:', error);
+    try {
+      await navigator.clipboard.writeText(text);
+      alert('Result copied to clipboard!');
+    } catch (err) {
+      console.error('Error copying to clipboard:', err);
+      alert('Could not share or copy result');
+    }
   }
 };
 
@@ -86,7 +72,13 @@ const GenZQuiz = () => {
   const [currentQuestion, setCurrentQuestion] = useState(null);
   const [options, setOptions] = useState([]);
   const [score, setScore] = useState(0);
-  const [highScore, setHighScore] = useState(0);
+  const [highScore, setHighScore] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const stored = localStorage.getItem('genZQuizHighScore');
+      return stored ? parseInt(stored) : 0;
+    }
+    return 0;
+  });
   const [questionsAnswered, setQuestionsAnswered] = useState(0);
   const [showResult, setShowResult] = useState(false);
   const [selectedOption, setSelectedOption] = useState(null);
@@ -382,15 +374,6 @@ const GenZQuiz = () => {
           <p className="mb-4">
             Time: {formatTime(endTime - startTime)}
           </p>
-          {score > 0 && score === highScore ? (
-            <p className="text-green-600 font-bold mb-4">
-              🏆 New High Score by {localStorage.getItem('genZQuizHighScoreAlias') || 'Anonymous'}! 🏆
-            </p>
-          ) : highScore > 0 ? (
-            <p className="text-gray-600 mb-4">
-              High Score: {highScore}/10 by {localStorage.getItem('genZQuizHighScoreAlias') || 'Anonymous'}
-            </p>
-          ) : null}
           <div className="mb-6">
             <p className="mb-4">Your level: {getScoreCategory(score).text}</p>
             <div className="relative w-64 h-64 mx-auto">
@@ -406,9 +389,7 @@ const GenZQuiz = () => {
           <div className="space-y-4">
             <button
               onClick={() => shareResult(score, getScoreCategory(score).text, endTime - startTime)}
-              onKeyPress={(e) => handleKeyPress(e, () => shareResult(score, getScoreCategory(score).text, endTime - startTime))}
-              tabIndex={0}
-              className="px-6 py-3 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors flex items-center justify-center mx-auto focus:outline-none focus:ring-2 focus:ring-green-500"
+              className="px-6 py-3 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors flex items-center justify-center mx-auto"
             >
               <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
@@ -426,20 +407,9 @@ const GenZQuiz = () => {
                 setEndTime(null);
                 localStorage.setItem('genZQuizScore', '0');
               }}
-              onKeyPress={(e) => handleKeyPress(e, () => {
-                setDictionary([...fullDictionary]);
-                setScore(0);
-                setQuestionsAnswered(0);
-                setQuizComplete(false);
-                setShowWelcome(true);
-                setStartTime(null);
-                setEndTime(null);
-                localStorage.setItem('genZQuizScore', '0');
-              })}
-              tabIndex={0}
-              className="px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors flex items-center justify-center mx-auto focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors flex items-center justify-center mx-auto"
             >
-              <RefreshCw className="w-4 h-4 mr-2" />
+              <RefreshCw className="h-4 w-4 mr-2" />
               Try Again
             </button>
           </div>
