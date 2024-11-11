@@ -33,10 +33,15 @@ const getScoreCategory = (score) => {
 // Add this function before your component
 const shareResult = async (score, level, timeInMs) => {
   const timeString = formatTime(timeInMs);
-  const alias = localStorage.getItem('genZQuizHighScoreAlias') || 'Anonymous';
-  const isHighScore = score === highScore;
+  const storedHighScore = localStorage.getItem('genZQuizHighScore');
+  const isHighScore = score > 0 && score === parseInt(storedHighScore);
   
-  const text = `${isHighScore ? `🏆 New High Score by ${alias}! 🏆\n` : ''}I scored ${score}/10 on the Gen Z Slang Quiz in ${timeString}!\nMy level: ${level} 🎯\nTest your knowledge: [your-website-url]`;
+  let text = `I scored ${score}/10 on the Gen Z Slang Quiz in ${timeString}!\nMy level: ${level} 🎯\nTest your knowledge: [your-website-url]`;
+  
+  if (isHighScore) {
+    const alias = localStorage.getItem('genZQuizHighScoreAlias') || 'Anonymous';
+    text = `🏆 New High Score by ${alias}! 🏆\n${text}`;
+  }
   
   try {
     // Try to share with image if available
@@ -133,7 +138,7 @@ const GenZQuiz = () => {
     if (questionsAnswered >= 9) {
       setEndTime(Date.now());  // Set end time when quiz completes
       setQuizComplete(true);
-      if (score > highScore) {
+      if (score > 0 && score > highScore) {
         setShowHighScoreScreen(true); // Show high score screen instead of completion screen
       }
       return;
@@ -377,7 +382,7 @@ const GenZQuiz = () => {
           <p className="mb-4">
             Time: {formatTime(endTime - startTime)}
           </p>
-          {score === highScore ? (
+          {score > 0 && score === highScore ? (
             <p className="text-green-600 font-bold mb-4">
               🏆 New High Score by {localStorage.getItem('genZQuizHighScoreAlias') || 'Anonymous'}! 🏆
             </p>
