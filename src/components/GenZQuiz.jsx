@@ -40,38 +40,7 @@ const shareResult = async (score, level, timeInMs) => {
     text = `🏆 New High Score by ${highScoreAlias}! 🏆\n${text}`;
   }
   
-  const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-  
   try {
-    if (isMobile && navigator.share && navigator.canShare) {
-      try {
-        // First share the text
-        await navigator.share({
-          title: 'My Gen Z Quiz Result',
-          text: text
-        });
-
-        // Then immediately share the image
-        const imageUrl = getScoreCategory(score).image;
-        const response = await fetch(imageUrl);
-        const blob = await response.blob();
-        const file = new File([blob], 'score-image.png', { type: blob.type });
-        
-        const imageShareData = {
-          files: [file]
-        };
-
-        if (navigator.canShare(imageShareData)) {
-          await navigator.share(imageShareData);
-        }
-        
-        return;
-      } catch (error) {
-        console.log('Error with mobile share:', error);
-      }
-    }
-    
-    // Desktop or fallback
     if (navigator.share) {
       await navigator.share({
         title: 'My Gen Z Quiz Result',
