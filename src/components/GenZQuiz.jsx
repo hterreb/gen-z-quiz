@@ -34,14 +34,45 @@ const getScoreCategory = (score) => {
 const shareResult = async (score, level, timeInMs) => {
   const timeString = formatTime(timeInMs);
   
-  // Basic result text
   let text = `I scored ${score}/10 on the Gen Z Slang Quiz in ${timeString}!\nMy level: ${level} 🎯\nTest your knowledge: [your-website-url]`;
   
+  if (score > 0 && score === highScore) {
+    const alias = localStorage.getItem('genZQuizHighScoreAlias') || 'Anonymous';
+    text = `🏆 New High Score by ${alias}! 🏆\n${text}`;
+  }
+  
   try {
+    // Try to share with image if supported
+    if (navigator.share && navigator.canShare) {
+      try {
+        // Get the image from your public folder
+        const imageUrl = getScoreCategory(score).image;
+        const response = await fetch(imageUrl);
+        const blob = await response.blob();
+        const file = new File([blob], 'score-image.png', { type: blob.type });
+        
+        // Check if we can share files
+        const shareData = {
+          title: 'My Gen Z Quiz Result',
+          text: text,
+          files: [file]
+        };
+
+        if (navigator.canShare(shareData)) {
+          await navigator.share(shareData);
+          return;
+        }
+      } catch (error) {
+        console.log('Error sharing with image:', error);
+        // Fall through to text-only share
+      }
+    }
+    
+    // Text-only share
     if (navigator.share) {
       await navigator.share({
         title: 'My Gen Z Quiz Result',
-        text: text,
+        text: text
       });
     } else {
       await navigator.clipboard.writeText(text);
@@ -241,20 +272,23 @@ const GenZQuiz = () => {
             transition={{ duration: 0.3 }}
           >
             <div className="text-center mb-6">
-              <h1 className="text-2xl font-bold mb-2 text-gray-900">Gen Z Slang Quiz</h1>
-              <div className="text-sm space-y-1 text-gray-800">
+              <h1 className="text-2xl font-bold mb-2">Gen Z Slang Quiz</h1>
+              <div className="text-sm space-y-1">
                 <div>Score: {score}/{questionsAnswered}</div>
-                <div>High Score: {highScore}/10</div>
-                {!quizComplete && (
-                  <>
-                    <div className="text-gray-700">
-                      Question {questionsAnswered + 1}/10
-                    </div>
-                    <div className="text-gray-700 font-mono">
-                      Time: {formatTime(elapsedTime)}
-                    </div>
-                  </>
-                )}
+                <div>
+                  High Score: {highScore}/10
+                  {highScore > 0 && (
+                    <span className="text-gray-600 ml-1">
+                      by {localStorage.getItem('genZQuizHighScoreAlias') || 'Anonymous'}
+                    </span>
+                  )}
+                </div>
+                <div className="text-xs text-gray-600">
+                  Question {questionsAnswered + 1}/10
+                </div>
+                <div className="text-gray-700 font-mono">
+                  Time: {formatTime(elapsedTime)}
+                </div>
               </div>
             </div>
 
