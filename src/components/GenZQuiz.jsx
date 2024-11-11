@@ -57,8 +57,7 @@ const shareResult = async (score, level, timeInMs) => {
         const shareData = {
           files: [file],
           title: 'My Gen Z Quiz Result',
-          text: text,
-          url: 'gen-z-quiz.vercel.app'
+          text: text
         };
 
         if (navigator.canShare(shareData)) {
@@ -74,10 +73,10 @@ const shareResult = async (score, level, timeInMs) => {
     if (navigator.share) {
       await navigator.share({
         title: 'My Gen Z Quiz Result',
-        text: text,
-        url: 'gen-z-quiz.vercel.app'
+        text: text
       });
     } else {
+      // Desktop fallback - copy to clipboard
       await navigator.clipboard.writeText(text);
       alert('Result copied to clipboard!');
     }
