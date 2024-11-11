@@ -33,17 +33,21 @@ const getScoreCategory = (score) => {
 // Add this function before your component
 const shareResult = async (score, level, timeInMs) => {
   const timeString = formatTime(timeInMs);
+  const storedHighScore = localStorage.getItem('genZQuizHighScore');
   
   let text = `I scored ${score}/10 on the Gen Z Slang Quiz in ${timeString}!\nMy level: ${level} 🎯\nTest your knowledge: [your-website-url]`;
   
-  if (score > 0 && score === highScore) {
+  // Only add high score text if this is a high score
+  if (score > 0 && storedHighScore && score === parseInt(storedHighScore)) {
     const alias = localStorage.getItem('genZQuizHighScoreAlias') || 'Anonymous';
     text = `🏆 New High Score by ${alias}! 🏆\n${text}`;
   }
   
   try {
-    // Try to share with image if supported
-    if (navigator.share && navigator.canShare) {
+    // Check if running on mobile
+    if (navigator.share && 
+        navigator.canShare && 
+        /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
       try {
         // Get the image from your public folder
         const imageUrl = getScoreCategory(score).image;
